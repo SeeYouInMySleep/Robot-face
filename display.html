@@ -42,9 +42,39 @@
   }
   #status.connected { background: #00ff88; }
   #status.error { background: #ff3333; }
+
+  /* Tap-to-start overlay */
+  #tap-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 50;
+    cursor: pointer;
+  }
+
+  #tap-overlay span {
+    font-family: 'Courier New', monospace;
+    color: #333;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  #tap-overlay .icon { font-size: 48px; }
 </style>
 </head>
 <body>
+
+<!-- Tap-to-start (nötig für iOS Audio + Fullscreen) -->
+<div id="tap-overlay">
+  <span class="icon">🤖</span>
+  <span>Antippen zum Starten</span>
+</div>
 
 <div id="face-container">
   <img id="img-a" src="" alt="">
@@ -68,13 +98,66 @@
   const imgB = document.getElementById('img-b');
   const status = document.getElementById('status');
   const audioPlayer = document.getElementById('audio-player');
+  const tapOverlay = document.getElementById('tap-overlay');
 
   let currentFace = 'Neutral';
   let showingA = true;
   let animInterval = null;
   let lastVoiceline = null;
   let lastUpdated = null;
+  let wakeLock = null;
 
+  // =============================================
+  // Wake Lock — verhindert Sleep
+  // =============================================
+  async function requestWakeLock() {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('Wake Lock aktiv');
+    } catch(e) {
+      console.log('Wake Lock nicht verfügbar:', e);
+    }
+  }
+
+  // Wake Lock neu anfordern wenn Tab wieder sichtbar wird
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
+  });
+
+  // =============================================
+  // Fullscreen
+  // =============================================
+  async function enterFullscreen() {
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+    } catch(e) {
+      console.log('Fullscreen nicht verfügbar:', e);
+    }
+  }
+
+  // =============================================
+  // Tap-to-start
+  // =============================================
+  tapOverlay.addEventListener('click', async () => {
+    // Audio aktivieren (iOS)
+    audioPlayer.play().catch(() => {});
+    audioPlayer.pause();
+
+    // Fullscreen
+    await enterFullscreen();
+
+    // Wake Lock
+    await requestWakeLock();
+
+    // Overlay ausblenden
+    tapOverlay.style.display = 'none';
+  }, { once: true });
+
+  // =============================================
+  // Face animation
+  // =============================================
   function setFace(face) {
     if (face === currentFace) return;
     currentFace = face;
@@ -112,7 +195,9 @@
     audioPlayer.play().catch(e => console.log('Audio error:', e));
   }
 
-  // Polling — fragt alle 500ms die Edge Function ab
+  // =============================================
+  // Polling
+  // =============================================
   async function poll() {
     try {
       const res = await fetch(FUNCTION_URL);
@@ -123,7 +208,6 @@
 
       if (data.face) setFace(data.face);
 
-      // Voiceline nur abspielen wenn updated_at sich geändert hat
       if (data.voiceline && data.updated_at !== lastUpdated) {
         lastUpdated = data.updated_at;
         playVoiceline(data.voiceline);
@@ -133,12 +217,6 @@
       console.log('Poll error:', e);
     }
   }
-
-  // iOS braucht User-Interaction für Audio
-  document.body.addEventListener('click', () => {
-    audioPlayer.play().catch(() => {});
-    audioPlayer.pause();
-  }, { once: true });
 
   setFace('Neutral');
   poll();
