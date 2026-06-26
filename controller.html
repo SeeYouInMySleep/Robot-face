@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Controller</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .robot-icon {
+    font-size: 32px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  .conn-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #333;
+    margin-left: auto;
+    transition: background 0.3s;
+    box-shadow: 0 0 0 3px #1a1a2e;
+  }
+  .conn-dot.connected { background: #00ff88; box-shadow: 0 0 8px #00ff8866; }
+  .conn-dot.error { background: #ff3333; }
+
+  section {
+    margin-bottom: 36px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 14px;
+  }
+
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .face-btn {
+    background: #111118;
+    border: 1px solid #222;
+    border-radius: 8px;
+    color: #ccc;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 18px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .face-btn .emoji {
+    display: block;
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+
+  .face-btn:hover {
+    border-color: #444;
+    background: #18181f;
+    color: #fff;
+  }
+
+  .face-btn.active {
+    border-color: #00ff88;
+    background: #001a0e;
+    color: #00ff88;
+    box-shadow: 0 0 12px #00ff8822;
+  }
+
+  .voice-btn {
+    background: #0f0f1a;
+    border: 1px solid #1a1a33;
+    border-radius: 8px;
+    color: #8888cc;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 14px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .voice-btn .emoji {
+    display: block;
+    font-size: 22px;
+    margin-bottom: 5px;
+  }
+
+  .voice-btn:hover {
+    border-color: #3333aa;
+    background: #141425;
+    color: #aaaaff;
+  }
+
+  .voice-btn.playing {
+    border-color: #6666ff;
+    background: #0d0d22;
+    color: #9999ff;
+    box-shadow: 0 0 10px #6666ff33;
+  }
+
+  .status-bar {
+    margin-top: 40px;
+    padding: 12px 16px;
+    background: #0d0d14;
+    border: 1px solid #1a1a1a;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #444;
+    letter-spacing: 0.05em;
+  }
+
+  .status-bar span { color: #666; }
+
+  /* Pulse animation for active face */
+  @keyframes pulse-border {
+    0% { box-shadow: 0 0 12px #00ff8822; }
+    50% { box-shadow: 0 0 20px #00ff8844; }
+    100% { box-shadow: 0 0 12px #00ff8822; }
+  }
+  .face-btn.active {
+    animation: pulse-border 2s infinite;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="robot-icon">🤖</span>
+  <h1>Robot Controller</h1>
+  <div class="conn-dot" id="conn-dot"></div>
+</header>
+
+<section>
+  <div class="section-label">Gesichtsausdruck</div>
+  <div class="btn-grid" id="face-buttons"></div>
+</section>
+
+<section>
+  <div class="section-label">Voicelines</div>
+  <div class="btn-grid" id="voice-buttons"></div>
+</section>
+
+<div class="status-bar">
+  Aktiv: <span id="status-face">—</span> &nbsp;|&nbsp; Letzte Aktion: <span id="status-time">—</span>
+</div>
+
+<script>
+  // =============================================
+  // CONFIG — hier deine Supabase-Daten eintragen
+  // =============================================
+  const SUPABASE_URL = 'https://spraxnqjbsmfdmqodfxk.supabase.co/';
+  const SUPABASE_ANON_KEY = 'sb_publishable_rE_ROSTEzj_vyekfwR1BvQ_44ZAxcTE';
+
+  // Gesichter — Name muss exakt dem Bildnamen entsprechen (Talk1.png, Talk2.png etc.)
+  const FACES = [
+    { name: 'Talk',    emoji: '💬' },
+    { name: 'Happy',   emoji: '😊' },
+    { name: 'Neutral', emoji: '😐' },
+    { name: 'Serious', emoji: '😤' },
+    { name: 'Sad',     emoji: '😢' },
+  ];
+
+  // Voicelines — file muss in /audio/ liegen
+  const VOICELINES = [
+    { label: 'Voiceline 1', emoji: '🔊', file: 'voice1.mp3' },
+    { label: 'Voiceline 2', emoji: '🔊', file: 'voice2.mp3' },
+    { label: 'Voiceline 3', emoji: '🔊', file: 'voice3.mp3' },
+  ];
+
+  // =============================================
+
+  const connDot = document.getElementById('conn-dot');
+  const statusFace = document.getElementById('status-face');
+  const statusTime = document.getElementById('status-time');
+
+  let activeFace = null;
+  let connected = false;
+
+  // Gesichts-Buttons bauen
+  const faceGrid = document.getElementById('face-buttons');
+  FACES.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'face-btn';
+    btn.id = 'face-' + f.name;
+    btn.innerHTML = `<span class="emoji">${f.emoji}</span>${f.name}`;
+    btn.onclick = () => sendFace(f.name);
+    faceGrid.appendChild(btn);
+  });
+
+  // Voiceline-Buttons bauen
+  const voiceGrid = document.getElementById('voice-buttons');
+  VOICELINES.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'voice-btn';
+    btn.innerHTML = `<span class="emoji">${v.emoji}</span>${v.label}`;
+    btn.onclick = () => sendVoice(v.file, btn);
+    voiceGrid.appendChild(btn);
+  });
+
+  async function supabasePatch(data) {
+    // Upsert in robot_state (row mit id=1)
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/robot_state?id=eq.1`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(data)
+    });
+
+    // Falls noch kein Eintrag existiert, insert
+    if (res.status === 404 || res.status === 204) {
+      await fetch(`${SUPABASE_URL}/rest/v1/robot_state`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ id: 1, ...data })
+      });
+    }
+  }
+
+  async function sendFace(name) {
+    // UI sofort updaten
+    if (activeFace) {
+      document.getElementById('face-' + activeFace)?.classList.remove('active');
+    }
+    activeFace = name;
+    document.getElementById('face-' + name)?.classList.add('active');
+    statusFace.textContent = name;
+    statusTime.textContent = new Date().toLocaleTimeString();
+
+    try {
+      await supabasePatch({ face: name, voiceline: null });
+    } catch(e) {
+      console.error('Send face error:', e);
+    }
+  }
+
+  async function sendVoice(file, btn) {
+    // Kurz highlighten
+    btn.classList.add('playing');
+    setTimeout(() => btn.classList.remove('playing'), 1000);
+    statusTime.textContent = new Date().toLocaleTimeString();
+
+    try {
+      // Voiceline separat — Gesicht bleibt wie es ist
+      await supabasePatch({ voiceline: file + '?t=' + Date.now() });
+    } catch(e) {
+      console.error('Send voice error:', e);
+    }
+  }
+
+  // Verbindung testen
+  async function checkConnection() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/robot_state?select=id&limit=1`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+        }
+      });
+      if (res.ok) {
+        connDot.className = 'conn-dot connected';
+        connected = true;
+      } else {
+        connDot.className = 'conn-dot error';
+      }
+    } catch(e) {
+      connDot.className = 'conn-dot error';
+    }
+  }
+
+  checkConnection();
+  setInterval(checkConnection, 10000);
+</script>
+
+</body>
+</html>
