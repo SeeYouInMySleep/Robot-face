@@ -44,69 +44,15 @@
   }
   #status.connected { background: #00ff88; }
   #status.error { background: #ff3333; }
-
-  #tap-overlay {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 50;
-    cursor: pointer;
-  }
-
-  #tap-overlay span {
-    font-family: 'Courier New', monospace;
-    color: #333;
-    font-size: 13px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-  }
-
-  #tap-overlay .icon { font-size: 48px; }
-
-  /* Stop-Button */
-  #stop-btn {
-    position: fixed;
-    top: 12px;
-    right: 12px;
-    background: #1a0000;
-    border: 1px solid #330000;
-    border-radius: 6px;
-    color: #ff3333;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    padding: 6px 10px;
-    cursor: pointer;
-    z-index: 10;
-    opacity: 0.4;
-    transition: opacity 0.2s;
-  }
-  #stop-btn:hover { opacity: 1; }
-  #stop-btn.stopped {
-    background: #001a00;
-    border-color: #003300;
-    color: #00ff88;
-  }
 </style>
 </head>
 <body>
-
-<div id="tap-overlay">
-  <span class="icon">🤖</span>
-  <span>Antippen zum Starten</span>
-</div>
 
 <div id="face-container">
   <img id="img-a" src="" alt="">
   <img id="img-b" src="" alt="">
 </div>
 <div id="status"></div>
-<button id="stop-btn">■ STOP</button>
 <audio id="audio-player" preload="auto"></audio>
 
 <script>
@@ -117,15 +63,13 @@
   const IMAGE_BASE = './images/';
   const AUDIO_BASE = './audio/';
   const ANIM_SPEED = 400;
-  const POLL_INTERVAL = 500; // ms
+  const POLL_INTERVAL = 500;
   // =============================================
 
   const imgA = document.getElementById('img-a');
   const imgB = document.getElementById('img-b');
   const status = document.getElementById('status');
   const audioPlayer = document.getElementById('audio-player');
-  const tapOverlay = document.getElementById('tap-overlay');
-  const stopBtn = document.getElementById('stop-btn');
 
   let currentFace = 'Neutral';
   let showingA = true;
@@ -133,99 +77,21 @@
   let lastVoiceline = null;
   let lastUpdated = null;
   let wakeLock = null;
-  let pollInterval = null;
-  let running = false;
 
-  // =============================================
   // Wake Lock
-  // =============================================
   async function requestWakeLock() {
     try {
       if (wakeLock) return;
       wakeLock = await navigator.wakeLock.request('screen');
       wakeLock.addEventListener('release', () => { wakeLock = null; });
-    } catch(e) {
-      console.log('Wake Lock nicht verfügbar:', e);
-    }
-  }
-
-  async function releaseWakeLock() {
-    if (wakeLock) {
-      await wakeLock.release();
-      wakeLock = null;
-    }
-  }
-
-  // Wake Lock neu anfordern wenn Tab wieder sichtbar
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && running) {
-      requestWakeLock();
-      startPolling();
-    } else {
-      stopPolling();
-    }
-  });
-
-  // =============================================
-  // Fullscreen
-  // =============================================
-  async function enterFullscreen() {
-    try {
-      const el = document.documentElement;
-      if (el.requestFullscreen) await el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
     } catch(e) {}
   }
 
-  // =============================================
-  // Polling starten / stoppen
-  // =============================================
-  function startPolling() {
-    if (pollInterval) return;
-    poll();
-    pollInterval = setInterval(poll, POLL_INTERVAL);
-    running = true;
-    stopBtn.textContent = '■ STOP';
-    stopBtn.classList.remove('stopped');
-    status.className = '';
-  }
-
-  function stopPolling() {
-    clearInterval(pollInterval);
-    pollInterval = null;
-    running = false;
-    stopBtn.textContent = '▶ START';
-    stopBtn.classList.add('stopped');
-    status.className = '';
-    releaseWakeLock();
-  }
-
-  // Stop/Start Button
-  stopBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (running) {
-      stopPolling();
-    } else {
-      startPolling();
-      requestWakeLock();
-    }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') requestWakeLock();
   });
 
-  // =============================================
-  // Tap-to-start
-  // =============================================
-  tapOverlay.addEventListener('click', async () => {
-    audioPlayer.play().catch(() => {});
-    audioPlayer.pause();
-    await enterFullscreen();
-    await requestWakeLock();
-    tapOverlay.style.display = 'none';
-    startPolling();
-  }, { once: true });
-
-  // =============================================
   // Face animation
-  // =============================================
   function setFace(face) {
     if (face === currentFace) return;
     currentFace = face;
@@ -258,9 +124,7 @@
     audioPlayer.play().catch(e => console.log('Audio error:', e));
   }
 
-  // =============================================
   // Polling
-  // =============================================
   async function poll() {
     try {
       const res = await fetch(FUNCTION_URL);
@@ -278,6 +142,9 @@
   }
 
   setFace('Neutral');
+  requestWakeLock();
+  poll();
+  setInterval(poll, POLL_INTERVAL);
 </script>
 </body>
 </html>
