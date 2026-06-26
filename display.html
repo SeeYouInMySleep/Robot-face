@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Robot Display</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -43,7 +45,6 @@
   #status.connected { background: #00ff88; }
   #status.error { background: #ff3333; }
 
-  /* Tap-to-start overlay */
   #tap-overlay {
     position: fixed;
     inset: 0;
@@ -66,11 +67,35 @@
   }
 
   #tap-overlay .icon { font-size: 48px; }
+
+  /* Stop-Button */
+  #stop-btn {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: #1a0000;
+    border: 1px solid #330000;
+    border-radius: 6px;
+    color: #ff3333;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 6px 10px;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+  #stop-btn:hover { opacity: 1; }
+  #stop-btn.stopped {
+    background: #001a00;
+    border-color: #003300;
+    color: #00ff88;
+  }
 </style>
 </head>
 <body>
 
-<!-- Tap-to-start (nötig für iOS Audio + Fullscreen) -->
 <div id="tap-overlay">
   <span class="icon">🤖</span>
   <span>Antippen zum Starten</span>
@@ -81,17 +106,18 @@
   <img id="img-b" src="" alt="">
 </div>
 <div id="status"></div>
+<button id="stop-btn">■ STOP</button>
 <audio id="audio-player" preload="auto"></audio>
 
 <script>
   // =============================================
-  // CONFIG — nur diese Zeilen anpassen
+  // CONFIG
   // =============================================
   const FUNCTION_URL = 'https://spraxnqjbsmfdmqodfxk.supabase.co/functions/v1/robot-controller';
-
   const IMAGE_BASE = './images/';
   const AUDIO_BASE = './audio/';
   const ANIM_SPEED = 400;
+  const POLL_INTERVAL = 500; // ms
   // =============================================
 
   const imgA = document.getElementById('img-a');
@@ -99,6 +125,7 @@
   const status = document.getElementById('status');
   const audioPlayer = document.getElementById('audio-player');
   const tapOverlay = document.getElementById('tap-overlay');
+  const stopBtn = document.getElementById('stop-btn');
 
   let currentFace = 'Neutral';
   let showingA = true;
@@ -106,22 +133,37 @@
   let lastVoiceline = null;
   let lastUpdated = null;
   let wakeLock = null;
+  let pollInterval = null;
+  let running = false;
 
   // =============================================
-  // Wake Lock — verhindert Sleep
+  // Wake Lock
   // =============================================
   async function requestWakeLock() {
     try {
+      if (wakeLock) return;
       wakeLock = await navigator.wakeLock.request('screen');
-      console.log('Wake Lock aktiv');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
     } catch(e) {
       console.log('Wake Lock nicht verfügbar:', e);
     }
   }
 
-  // Wake Lock neu anfordern wenn Tab wieder sichtbar wird
+  async function releaseWakeLock() {
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  }
+
+  // Wake Lock neu anfordern wenn Tab wieder sichtbar
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') requestWakeLock();
+    if (document.visibilityState === 'visible' && running) {
+      requestWakeLock();
+      startPolling();
+    } else {
+      stopPolling();
+    }
   });
 
   // =============================================
@@ -132,27 +174,53 @@
       const el = document.documentElement;
       if (el.requestFullscreen) await el.requestFullscreen();
       else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
-    } catch(e) {
-      console.log('Fullscreen nicht verfügbar:', e);
-    }
+    } catch(e) {}
   }
+
+  // =============================================
+  // Polling starten / stoppen
+  // =============================================
+  function startPolling() {
+    if (pollInterval) return;
+    poll();
+    pollInterval = setInterval(poll, POLL_INTERVAL);
+    running = true;
+    stopBtn.textContent = '■ STOP';
+    stopBtn.classList.remove('stopped');
+    status.className = '';
+  }
+
+  function stopPolling() {
+    clearInterval(pollInterval);
+    pollInterval = null;
+    running = false;
+    stopBtn.textContent = '▶ START';
+    stopBtn.classList.add('stopped');
+    status.className = '';
+    releaseWakeLock();
+  }
+
+  // Stop/Start Button
+  stopBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (running) {
+      stopPolling();
+    } else {
+      startPolling();
+      requestWakeLock();
+    }
+  });
 
   // =============================================
   // Tap-to-start
   // =============================================
   tapOverlay.addEventListener('click', async () => {
-    // Audio aktivieren (iOS)
     audioPlayer.play().catch(() => {});
     audioPlayer.pause();
-
-    // Fullscreen
     await enterFullscreen();
-
-    // Wake Lock
     await requestWakeLock();
-
-    // Overlay ausblenden
     tapOverlay.style.display = 'none';
+    startPolling();
   }, { once: true });
 
   // =============================================
@@ -168,20 +236,16 @@
     clearInterval(animInterval);
 
     if (showingA) {
-      imgA.src = src1;
-      imgB.src = src2;
+      imgA.src = src1; imgB.src = src2;
     } else {
-      imgB.src = src1;
-      imgA.src = src2;
+      imgB.src = src1; imgA.src = src2;
     }
 
     animInterval = setInterval(() => {
       if (showingA) {
-        imgA.style.opacity = '0';
-        imgB.style.opacity = '1';
+        imgA.style.opacity = '0'; imgB.style.opacity = '1';
       } else {
-        imgB.style.opacity = '0';
-        imgA.style.opacity = '1';
+        imgB.style.opacity = '0'; imgA.style.opacity = '1';
       }
       showingA = !showingA;
     }, ANIM_SPEED);
@@ -190,8 +254,7 @@
   function playVoiceline(file) {
     if (!file || file === lastVoiceline) return;
     lastVoiceline = file;
-    const cleanFile = file.split('?')[0];
-    audioPlayer.src = AUDIO_BASE + cleanFile;
+    audioPlayer.src = AUDIO_BASE + file.split('?')[0];
     audioPlayer.play().catch(e => console.log('Audio error:', e));
   }
 
@@ -203,24 +266,18 @@
       const res = await fetch(FUNCTION_URL);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-
       status.className = 'connected';
-
       if (data.face) setFace(data.face);
-
       if (data.voiceline && data.updated_at !== lastUpdated) {
         lastUpdated = data.updated_at;
         playVoiceline(data.voiceline);
       }
     } catch(e) {
       status.className = 'error';
-      console.log('Poll error:', e);
     }
   }
 
   setFace('Neutral');
-  poll();
-  setInterval(poll, 500);
 </script>
 </body>
 </html>
