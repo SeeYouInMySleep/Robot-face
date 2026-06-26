@@ -15,6 +15,64 @@
     padding: 32px 24px;
   }
 
+  /* Password screen */
+  #lock-screen {
+    position: fixed;
+    inset: 0;
+    background: #0a0a0f;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 100;
+  }
+
+  #lock-screen h2 {
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    color: #555;
+    text-transform: uppercase;
+  }
+
+  #lock-screen input {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    padding: 12px 20px;
+    text-align: center;
+    width: 240px;
+    outline: none;
+  }
+
+  #lock-screen input:focus { border-color: #555; }
+
+  #lock-screen button {
+    background: #00ff88;
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 12px 32px;
+    text-transform: uppercase;
+  }
+
+  #lock-error {
+    color: #ff3333;
+    font-size: 12px;
+    min-height: 16px;
+  }
+
+  /* Main UI */
+  #main { display: none; }
+
   header {
     display: flex;
     align-items: center;
@@ -22,9 +80,7 @@
     margin-bottom: 40px;
   }
 
-  .robot-icon {
-    font-size: 32px;
-  }
+  .robot-icon { font-size: 32px; }
 
   h1 {
     font-size: 22px;
@@ -40,14 +96,11 @@
     background: #333;
     margin-left: auto;
     transition: background 0.3s;
-    box-shadow: 0 0 0 3px #1a1a2e;
   }
   .conn-dot.connected { background: #00ff88; box-shadow: 0 0 8px #00ff8866; }
   .conn-dot.error { background: #ff3333; }
 
-  section {
-    margin-bottom: 36px;
-  }
+  section { margin-bottom: 36px; }
 
   .section-label {
     font-size: 10px;
@@ -76,27 +129,22 @@
     cursor: pointer;
     transition: all 0.15s;
     text-align: center;
-    position: relative;
-    overflow: hidden;
   }
 
-  .face-btn .emoji {
-    display: block;
-    font-size: 28px;
-    margin-bottom: 6px;
-  }
+  .face-btn .emoji { display: block; font-size: 28px; margin-bottom: 6px; }
+  .face-btn:hover { border-color: #444; background: #18181f; color: #fff; }
 
-  .face-btn:hover {
-    border-color: #444;
-    background: #18181f;
-    color: #fff;
+  @keyframes pulse-border {
+    0% { box-shadow: 0 0 12px #00ff8822; }
+    50% { box-shadow: 0 0 20px #00ff8844; }
+    100% { box-shadow: 0 0 12px #00ff8822; }
   }
 
   .face-btn.active {
     border-color: #00ff88;
     background: #001a0e;
     color: #00ff88;
-    box-shadow: 0 0 12px #00ff8822;
+    animation: pulse-border 2s infinite;
   }
 
   .voice-btn {
@@ -114,18 +162,8 @@
     text-align: center;
   }
 
-  .voice-btn .emoji {
-    display: block;
-    font-size: 22px;
-    margin-bottom: 5px;
-  }
-
-  .voice-btn:hover {
-    border-color: #3333aa;
-    background: #141425;
-    color: #aaaaff;
-  }
-
+  .voice-btn .emoji { display: block; font-size: 22px; margin-bottom: 5px; }
+  .voice-btn:hover { border-color: #3333aa; background: #141425; color: #aaaaff; }
   .voice-btn.playing {
     border-color: #6666ff;
     background: #0d0d22;
@@ -143,50 +181,49 @@
     color: #444;
     letter-spacing: 0.05em;
   }
-
   .status-bar span { color: #666; }
-
-  /* Pulse animation for active face */
-  @keyframes pulse-border {
-    0% { box-shadow: 0 0 12px #00ff8822; }
-    50% { box-shadow: 0 0 20px #00ff8844; }
-    100% { box-shadow: 0 0 12px #00ff8822; }
-  }
-  .face-btn.active {
-    animation: pulse-border 2s infinite;
-  }
 </style>
 </head>
 <body>
 
-<header>
-  <span class="robot-icon">🤖</span>
-  <h1>Robot Controller</h1>
-  <div class="conn-dot" id="conn-dot"></div>
-</header>
+<!-- Lock Screen -->
+<div id="lock-screen">
+  <span style="font-size:40px">🤖</span>
+  <h2>Robot Controller</h2>
+  <input type="password" id="pw-input" placeholder="Passwort" autofocus>
+  <div id="lock-error"></div>
+  <button onclick="unlock()">Entsperren</button>
+</div>
 
-<section>
-  <div class="section-label">Gesichtsausdruck</div>
-  <div class="btn-grid" id="face-buttons"></div>
-</section>
+<!-- Main UI -->
+<div id="main">
+  <header>
+    <span class="robot-icon">🤖</span>
+    <h1>Robot Controller</h1>
+    <div class="conn-dot" id="conn-dot"></div>
+  </header>
 
-<section>
-  <div class="section-label">Voicelines</div>
-  <div class="btn-grid" id="voice-buttons"></div>
-</section>
+  <section>
+    <div class="section-label">Gesichtsausdruck</div>
+    <div class="btn-grid" id="face-buttons"></div>
+  </section>
 
-<div class="status-bar">
-  Aktiv: <span id="status-face">—</span> &nbsp;|&nbsp; Letzte Aktion: <span id="status-time">—</span>
+  <section>
+    <div class="section-label">Voicelines</div>
+    <div class="btn-grid" id="voice-buttons"></div>
+  </section>
+
+  <div class="status-bar">
+    Aktiv: <span id="status-face">—</span> &nbsp;|&nbsp; Letzte Aktion: <span id="status-time">—</span>
+  </div>
 </div>
 
 <script>
   // =============================================
-  // CONFIG — hier deine Supabase-Daten eintragen
+  // CONFIG — nur diese Zeile anpassen
   // =============================================
-  const SUPABASE_URL = 'https://spraxnqjbsmfdmqodfxk.supabase.co/';
-  const SUPABASE_ANON_KEY = 'sb_publishable_rE_ROSTEzj_vyekfwR1BvQ_44ZAxcTE';
+  const FUNCTION_URL = 'https://spraxnqjbsmfdmqodfxk.supabase.co/functions/v1/robot-controller';
 
-  // Gesichter — Name muss exakt dem Bildnamen entsprechen (Talk1.png, Talk2.png etc.)
   const FACES = [
     { name: 'Talk',    emoji: '💬' },
     { name: 'Happy',   emoji: '😊' },
@@ -195,124 +232,130 @@
     { name: 'Sad',     emoji: '😢' },
   ];
 
-  // Voicelines — file muss in /audio/ liegen
   const VOICELINES = [
     { label: 'Voiceline 1', emoji: '🔊', file: 'voice1.mp3' },
     { label: 'Voiceline 2', emoji: '🔊', file: 'voice2.mp3' },
     { label: 'Voiceline 3', emoji: '🔊', file: 'voice3.mp3' },
   ];
-
   // =============================================
 
-  const connDot = document.getElementById('conn-dot');
-  const statusFace = document.getElementById('status-face');
-  const statusTime = document.getElementById('status-time');
-
+  let password = '';
   let activeFace = null;
-  let connected = false;
 
-  // Gesichts-Buttons bauen
-  const faceGrid = document.getElementById('face-buttons');
-  FACES.forEach(f => {
-    const btn = document.createElement('button');
-    btn.className = 'face-btn';
-    btn.id = 'face-' + f.name;
-    btn.innerHTML = `<span class="emoji">${f.emoji}</span>${f.name}`;
-    btn.onclick = () => sendFace(f.name);
-    faceGrid.appendChild(btn);
+  // Password input — Enter zum Entsperren
+  document.getElementById('pw-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') unlock();
   });
 
-  // Voiceline-Buttons bauen
-  const voiceGrid = document.getElementById('voice-buttons');
-  VOICELINES.forEach(v => {
-    const btn = document.createElement('button');
-    btn.className = 'voice-btn';
-    btn.innerHTML = `<span class="emoji">${v.emoji}</span>${v.label}`;
-    btn.onclick = () => sendVoice(v.file, btn);
-    voiceGrid.appendChild(btn);
-  });
+  async function unlock() {
+    const input = document.getElementById('pw-input').value;
+    const lockError = document.getElementById('lock-error');
 
-  async function supabasePatch(data) {
-    // Upsert in robot_state (row mit id=1)
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/robot_state?id=eq.1`, {
-      method: 'PATCH',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(data)
-    });
-
-    // Falls noch kein Eintrag existiert, insert
-    if (res.status === 404 || res.status === 204) {
-      await fetch(`${SUPABASE_URL}/rest/v1/robot_state`, {
+    // Passwort testen indem wir einen POST schicken
+    try {
+      const res = await fetch(FUNCTION_URL, {
         method: 'POST',
         headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
           'Content-Type': 'application/json',
-          'Prefer': 'return=minimal'
+          'x-controller-password': input
         },
-        body: JSON.stringify({ id: 1, ...data })
+        body: JSON.stringify({ face: null })
       });
-    }
-  }
 
-  async function sendFace(name) {
-    // UI sofort updaten
-    if (activeFace) {
-      document.getElementById('face-' + activeFace)?.classList.remove('active');
-    }
-    activeFace = name;
-    document.getElementById('face-' + name)?.classList.add('active');
-    statusFace.textContent = name;
-    statusTime.textContent = new Date().toLocaleTimeString();
+      if (res.status === 401) {
+        lockError.textContent = 'Falsches Passwort';
+        return;
+      }
 
-    try {
-      await supabasePatch({ face: name, voiceline: null });
+      password = input;
+      document.getElementById('lock-screen').style.display = 'none';
+      document.getElementById('main').style.display = 'block';
+      init();
     } catch(e) {
-      console.error('Send face error:', e);
+      lockError.textContent = 'Verbindungsfehler';
     }
   }
 
-  async function sendVoice(file, btn) {
-    // Kurz highlighten
-    btn.classList.add('playing');
-    setTimeout(() => btn.classList.remove('playing'), 1000);
-    statusTime.textContent = new Date().toLocaleTimeString();
+  function init() {
+    const connDot = document.getElementById('conn-dot');
+    const statusFace = document.getElementById('status-face');
+    const statusTime = document.getElementById('status-time');
 
-    try {
-      // Voiceline separat — Gesicht bleibt wie es ist
-      await supabasePatch({ voiceline: file + '?t=' + Date.now() });
-    } catch(e) {
-      console.error('Send voice error:', e);
-    }
-  }
+    // Gesichts-Buttons
+    const faceGrid = document.getElementById('face-buttons');
+    FACES.forEach(f => {
+      const btn = document.createElement('button');
+      btn.className = 'face-btn';
+      btn.id = 'face-' + f.name;
+      btn.innerHTML = `<span class="emoji">${f.emoji}</span>${f.name}`;
+      btn.onclick = () => sendFace(f.name);
+      faceGrid.appendChild(btn);
+    });
 
-  // Verbindung testen
-  async function checkConnection() {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/robot_state?select=id&limit=1`, {
-        headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-        }
-      });
-      if (res.ok) {
-        connDot.className = 'conn-dot connected';
-        connected = true;
-      } else {
+    // Voiceline-Buttons
+    const voiceGrid = document.getElementById('voice-buttons');
+    VOICELINES.forEach(v => {
+      const btn = document.createElement('button');
+      btn.className = 'voice-btn';
+      btn.innerHTML = `<span class="emoji">${v.emoji}</span>${v.label}`;
+      btn.onclick = () => sendVoice(v.file, btn);
+      voiceGrid.appendChild(btn);
+    });
+
+    async function sendFace(name) {
+      if (activeFace) document.getElementById('face-' + activeFace)?.classList.remove('active');
+      activeFace = name;
+      document.getElementById('face-' + name)?.classList.add('active');
+      statusFace.textContent = name;
+      statusTime.textContent = new Date().toLocaleTimeString();
+
+      try {
+        const res = await fetch(FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-controller-password': password
+          },
+          body: JSON.stringify({ face: name, voiceline: null })
+        });
+        connDot.className = 'conn-dot ' + (res.ok ? 'connected' : 'error');
+      } catch(e) {
         connDot.className = 'conn-dot error';
       }
-    } catch(e) {
-      connDot.className = 'conn-dot error';
     }
-  }
 
-  checkConnection();
-  setInterval(checkConnection, 10000);
+    async function sendVoice(file, btn) {
+      btn.classList.add('playing');
+      setTimeout(() => btn.classList.remove('playing'), 1000);
+      statusTime.textContent = new Date().toLocaleTimeString();
+
+      try {
+        const res = await fetch(FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-controller-password': password
+          },
+          body: JSON.stringify({ voiceline: file })
+        });
+        connDot.className = 'conn-dot ' + (res.ok ? 'connected' : 'error');
+      } catch(e) {
+        connDot.className = 'conn-dot error';
+      }
+    }
+
+    // Verbindungscheck
+    async function checkConn() {
+      try {
+        const res = await fetch(FUNCTION_URL);
+        connDot.className = 'conn-dot ' + (res.ok ? 'connected' : 'error');
+      } catch(e) {
+        connDot.className = 'conn-dot error';
+      }
+    }
+    checkConn();
+    setInterval(checkConn, 10000);
+  }
 </script>
 
 </body>
