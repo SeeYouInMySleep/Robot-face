@@ -96,15 +96,24 @@
     if (face === currentFace) return;
     currentFace = face;
 
+    clearInterval(animInterval);
+
+    // Schwarzer Screen
+    if (face === 'Off') {
+      imgA.style.opacity = '0';
+      imgB.style.opacity = '0';
+      return;
+    }
+
     const src1 = IMAGE_BASE + face + '1.png';
     const src2 = IMAGE_BASE + face + '2.png';
 
-    clearInterval(animInterval);
-
     if (showingA) {
       imgA.src = src1; imgB.src = src2;
+      imgA.style.opacity = '1'; imgB.style.opacity = '0';
     } else {
       imgB.src = src1; imgA.src = src2;
+      imgB.style.opacity = '1'; imgA.style.opacity = '0';
     }
 
     animInterval = setInterval(() => {
@@ -118,10 +127,16 @@
   }
 
   function playVoiceline(file) {
-    if (!file || file === lastVoiceline) return;
-    lastVoiceline = file;
-    audioPlayer.src = AUDIO_BASE + file.split('?')[0];
-    audioPlayer.play().catch(e => console.log('Audio error:', e));
+    if (!file) return;
+    const cleanFile = file.split('?')[0];
+    // Stoppen falls noch was läuft
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    audioPlayer.src = AUDIO_BASE + cleanFile;
+    // Kurz warten dann abspielen (iOS braucht das)
+    setTimeout(() => {
+      audioPlayer.play().catch(e => console.log('Audio error:', e));
+    }, 50);
   }
 
   // Polling
@@ -132,14 +147,22 @@
       const data = await res.json();
       status.className = 'connected';
       if (data.face) setFace(data.face);
-      if (data.voiceline && data.updated_at !== lastUpdated) {
+      // updated_at vergleichen um doppeltes Abspielen zu verhindern
+      if (data.voiceline && data.updated_at && data.updated_at !== lastUpdated) {
         lastUpdated = data.updated_at;
+        lastVoiceline = data.voiceline;
         playVoiceline(data.voiceline);
       }
     } catch(e) {
       status.className = 'error';
     }
   }
+
+  // Einmaliger Tap zum Audio-Freischalten (Browser-Pflicht)
+  document.body.addEventListener('click', () => {
+    audioPlayer.play().catch(() => {});
+    audioPlayer.pause();
+  }, { once: true });
 
   setFace('Neutral');
   requestWakeLock();

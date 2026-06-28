@@ -164,6 +164,32 @@
 
   .voice-btn .emoji { display: block; font-size: 22px; margin-bottom: 5px; }
   .voice-btn:hover { border-color: #3333aa; background: #141425; color: #aaaaff; }
+
+  .group-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #333;
+    margin: 18px 0 8px 0;
+    grid-column: 1 / -1;
+  }
+
+  .group-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    grid-column: 1 / -1;
+  }
+
+  .group-row .voice-btn {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  .group-row .voice-btn .emoji {
+    font-size: 16px;
+    margin-bottom: 3px;
+  }
   .voice-btn.playing {
     border-color: #6666ff;
     background: #0d0d22;
@@ -210,7 +236,7 @@
 
   <section>
     <div class="section-label">Voicelines</div>
-    <div class="btn-grid" id="voice-buttons"></div>
+    <div id="voice-buttons" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr));"></div>
   </section>
 
   <div class="status-bar">
@@ -230,18 +256,64 @@
     { name: 'Neutral', emoji: '😐' },
     { name: 'Serious', emoji: '😤' },
     { name: 'Sad',     emoji: '😢' },
+    { name: 'Off',     emoji: '⬛' },
   ];
 
-const VOICELINES = [
-  { label: '67',            emoji: '🔊', file: '67.mp3' },
-  { label: 'Hallo',         emoji: '👋', file: 'hallo.mp3' },
-  { label: 'Herz',          emoji: '❤️',  file: 'herz.mp3' },
-  { label: 'Tanz',          emoji: '💃', file: 'Tanz.mp3' },
-  { label: 'Verabschiedung',emoji: '👋', file: 'Verabschiedung.mp3' },
-  { label: 'Wie helfen',    emoji: '🤝', file: 'wieHelfen.mp3' },
-  { label: 'Atemuebung',     emoji: '🌬️', file: 'Atemuebung.mp3' },
-  { label: 'Voice',         emoji: '🔊', file: 'voice.mp3' },
-];
+  const VOICELINES = [
+    // Allgemein
+    { label: '67',            emoji: '🔊', file: '67.mp3',           group: 'Allgemein' },
+    { label: 'Atemübung',     emoji: '🌬️', file: 'Atemuebung.mp3',   group: 'Allgemein' },
+    { label: 'Hallo',         emoji: '👋', file: 'hallo.mp3',         group: 'Allgemein' },
+    { label: 'Herz',          emoji: '❤️',  file: 'herz.mp3',          group: 'Allgemein' },
+    { label: 'Tanz',          emoji: '💃', file: 'Tanz.mp3',          group: 'Allgemein' },
+    { label: 'Verabschiedung',emoji: '🙋', file: 'Verabschiedung.mp3',group: 'Allgemein' },
+    { label: 'Wie helfen',    emoji: '🤝', file: 'wieHelfen.mp3',     group: 'Allgemein' },
+    { label: 'Voice',         emoji: '🔊', file: 'voice.mp3',         group: 'Allgemein' },
+    // Scenario A
+    { label: 'A-1',  emoji: '▶️', file: 'Scenario_A_1.mp3',  group: 'Scenario A' },
+    { label: 'A-2',  emoji: '▶️', file: 'Scenario_A_2.mp3',  group: 'Scenario A' },
+    { label: 'A-3',  emoji: '▶️', file: 'Scenario_A_3.mp3',  group: 'Scenario A' },
+    { label: 'A-4',  emoji: '▶️', file: 'Scenario_A_4.mp3',  group: 'Scenario A' },
+    { label: 'A-5',  emoji: '▶️', file: 'Scenario_A_5.mp3',  group: 'Scenario A' },
+    { label: 'A-6',  emoji: '▶️', file: 'Scenario_A_6.mp3',  group: 'Scenario A' },
+    { label: 'A-7',  emoji: '▶️', file: 'Scenario_A_7.mp3',  group: 'Scenario A' },
+    { label: 'A-8',  emoji: '▶️', file: 'Scenario_A_8.mp3',  group: 'Scenario A' },
+    { label: 'A-9',  emoji: '▶️', file: 'Scenario_A_9.mp3',  group: 'Scenario A' },
+    { label: 'A-10', emoji: '▶️', file: 'Scenario_A_10.mp3', group: 'Scenario A' },
+    { label: 'A-11', emoji: '▶️', file: 'Scenario_A_11.mp3', group: 'Scenario A' },
+    // Scenario B
+    { label: 'B-1',  emoji: '▶️', file: 'Scenario_B_1.mp3',  group: 'Scenario B' },
+    { label: 'B-2',  emoji: '▶️', file: 'Scenario_B_2.mp3',  group: 'Scenario B' },
+    { label: 'B-3',  emoji: '▶️', file: 'Scenario_B_3.mp3',  group: 'Scenario B' },
+    { label: 'B-4',  emoji: '▶️', file: 'Scenario_B_4.mp3',  group: 'Scenario B' },
+    { label: 'B-5',  emoji: '▶️', file: 'Scenario_B_5.mp3',  group: 'Scenario B' },
+    { label: 'B-6',  emoji: '▶️', file: 'Scenario_B_6.mp3',  group: 'Scenario B' },
+    { label: 'B-7',  emoji: '▶️', file: 'Scenario_B_7.mp3',  group: 'Scenario B' },
+    { label: 'B-8',  emoji: '▶️', file: 'Scenario_B_8.mp3',  group: 'Scenario B' },
+    { label: 'B-9',  emoji: '▶️', file: 'Scenario_B_9.mp3',  group: 'Scenario B' },
+    // Scenario C
+    { label: 'C-1',           emoji: '▶️', file: 'Scenario_C_1.mp3',               group: 'Scenario C' },
+    { label: 'C-2',           emoji: '▶️', file: 'Scenario_C_2.mp3',               group: 'Scenario C' },
+    { label: 'C-3',           emoji: '▶️', file: 'Scenario_C_3.mp3',               group: 'Scenario C' },
+    { label: 'C-4',           emoji: '▶️', file: 'Scenario_C_4.mp3',               group: 'Scenario C' },
+    { label: 'C-5',           emoji: '▶️', file: 'Scenario_C_5.mp3',               group: 'Scenario C' },
+    { label: 'C-5 Einatmen',  emoji: '🌬️', file: 'Scenario_C_5_Atem_Einatmen.mp3', group: 'Scenario C' },
+    { label: 'C-5 Ausatmen',  emoji: '🌬️', file: 'Scenario_C_5_Atem_Ausatmen.mp3', group: 'Scenario C' },
+    { label: 'C-6',           emoji: '▶️', file: 'Scenario_C_6.mp3',               group: 'Scenario C' },
+    { label: 'C-7',           emoji: '▶️', file: 'Scenario_C_7.mp3',               group: 'Scenario C' },
+    { label: 'C-8',           emoji: '▶️', file: 'Scenario_C_8.mp3',               group: 'Scenario C' },
+    // Scenario D
+    { label: 'D-1',           emoji: '▶️', file: 'Scenario_D_1.mp3',               group: 'Scenario D' },
+    { label: 'D-2',           emoji: '▶️', file: 'Scenario_D_2.mp3',               group: 'Scenario D' },
+    { label: 'D-3',           emoji: '▶️', file: 'Scenario_D_3.mp3',               group: 'Scenario D' },
+    { label: 'D-4',           emoji: '▶️', file: 'Scenario_D_4.mp3',               group: 'Scenario D' },
+    { label: 'D-4 Einatmen',  emoji: '🌬️', file: 'Scenario_D_4_Atem_Einatmen.mp3', group: 'Scenario D' },
+    { label: 'D-4 Ausatmen',  emoji: '🌬️', file: 'Scenario_D_4_Atem_Ausatmen.mp3', group: 'Scenario D' },
+    { label: 'D-5',           emoji: '▶️', file: 'Scenario_D_5.mp3',               group: 'Scenario D' },
+    { label: 'D-6',           emoji: '▶️', file: 'Scenario_D_6.mp3',               group: 'Scenario D' },
+    { label: 'D-7',           emoji: '▶️', file: 'Scenario_D_7.mp3',               group: 'Scenario D' },
+    { label: 'D-8',           emoji: '▶️', file: 'Scenario_D_8.mp3',               group: 'Scenario D' },
+  ];
   // =============================================
 
   let password = '';
@@ -297,14 +369,25 @@ const VOICELINES = [
       faceGrid.appendChild(btn);
     });
 
-    // Voiceline-Buttons
+    // Voiceline-Buttons gruppiert
     const voiceGrid = document.getElementById('voice-buttons');
-    VOICELINES.forEach(v => {
-      const btn = document.createElement('button');
-      btn.className = 'voice-btn';
-      btn.innerHTML = `<span class="emoji">${v.emoji}</span>${v.label}`;
-      btn.onclick = () => sendVoice(v.file, btn);
-      voiceGrid.appendChild(btn);
+    const groups = [...new Set(VOICELINES.map(v => v.group))];
+    groups.forEach(group => {
+      const groupLabel = document.createElement('div');
+      groupLabel.className = 'group-label';
+      groupLabel.textContent = group;
+      voiceGrid.appendChild(groupLabel);
+
+      const groupRow = document.createElement('div');
+      groupRow.className = 'group-row';
+      VOICELINES.filter(v => v.group === group).forEach(v => {
+        const btn = document.createElement('button');
+        btn.className = 'voice-btn';
+        btn.innerHTML = `<span class="emoji">${v.emoji}</span>${v.label}`;
+        btn.onclick = () => sendVoice(v.file, btn);
+        groupRow.appendChild(btn);
+      });
+      voiceGrid.appendChild(groupRow);
     });
 
     async function sendFace(name) {
